@@ -89,6 +89,14 @@ func main() {
 			log.Fatal("something went wrong")
 		}
 	}
+
+	// sobel op
+	if os.Args[2] == "-s" {
+		pxArr := []pixel{}
+		for i := 0; i < len(bmp)-2; i += 3 {
+			pxArr = append(pxArr, pixel{bmp[i], bmp[i+2], bmp[i+1]})
+		}
+	}
 }
 
 func boxBlur(img []pixel, w int) []pixel {
@@ -103,34 +111,46 @@ func boxBlur(img []pixel, w int) []pixel {
 	return ret
 }
 
-// func sobel(img []pixel, w int) []pixel {
-// 	ret := []pixel{}
+func sobel(img []pixel, w int) []pixel {
+	ret := []pixel{}
 
-// 	for i := range img {
-// 		kernel := calcKernel(img, i, w)
-// 		sobel := calcSobel(kernel)
-// 	}
-// }
+	for i := range img {
+		kernel := calcKernel(img, i, w)
+		sobel := calcSobel(kernel)
+		ret = append(ret, sobel)
+	}
+
+	return ret
+}
+
+func calcSobel(kernel []pixel) pixel {
+	horOp := []int{1, 0, -1, 2, 0, -2, 1, 0 - 1}
+	verOp := []int{-1, -2, -1, 0, 0, 0, 1, 2, 1}
+	horRes := []int{}
+	verRes := []int{}
+
+	// created operated values [0] is r, [1] is b, [2] is g repeating to end
+	for _, pix := range kernel {
+		for i := range horOp {
+			r := int(pix.r)
+			b := int(pix.b)
+			g := int(pix.g)
+			horRes = append(horRes, r*horOp[i], g*horOp[i], b*horOp[i])
+		}
+	}
+	for _, pix := range kernel {
+		for i := range verOp {
+			r := int(pix.r)
+			b := int(pix.b)
+			g := int(pix.g)
+			verRes = append(horRes, r*verOp[i], g*verOp[i], b*verOp[i])
+		}
+	}
+
+	return pixel{}
+}
 
 func calcKernel(img []pixel, i int, w int) []pixel {
-	// // test
-	// if i%w != 0 && (i+1)%w != 0 && len(img)-i >= w && i > w { // return for all non-edges
-	// 	return []pixel{
-	// 		img[i-w-1], //NW
-	// 		img[i-w],   //N
-	// 		img[i-w+1], //NE
-	// 		img[i-1],   //W
-	// 		img[i],     //CURR
-	// 		img[i+1],   //E
-	// 		img[i+w-1], //SW
-	// 		img[i+w],   //S
-	// 		img[i+w+1], //SE
-	// 		// return []pixel{}
-	// 	}
-
-	// } else {
-	// 	return []pixel{}
-	// }
 
 	if i < w && i%w == 0 { // top left corner
 		return []pixel{
