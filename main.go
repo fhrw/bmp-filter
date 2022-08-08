@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"log"
+	"math"
 	"os"
 )
 
@@ -96,6 +97,17 @@ func main() {
 		for i := 0; i < len(bmp)-2; i += 3 {
 			pxArr = append(pxArr, pixel{bmp[i], bmp[i+2], bmp[i+1]})
 		}
+		width := int(wB)
+		sobelled := sobel(pxArr, width)
+
+		for _, pix := range sobelled {
+			filteredBMP = append(filteredBMP, pix.r, pix.b, pix.g)
+		}
+
+		_, wErr := outputFile.Write(filteredBMP)
+		if wErr != nil {
+			log.Fatal("something went wrong")
+		}
 	}
 }
 
@@ -124,30 +136,45 @@ func sobel(img []pixel, w int) []pixel {
 }
 
 func calcSobel(kernel []pixel) pixel {
-	horOp := []int{1, 0, -1, 2, 0, -2, 1, 0 - 1}
+	horOp := []int{1, 0, -1, 2, 0, -2, 1, 0, -1}
 	verOp := []int{-1, -2, -1, 0, 0, 0, 1, 2, 1}
 	horRes := []int{}
 	verRes := []int{}
 
 	// created operated values [0] is r, [1] is b, [2] is g repeating to end
-	for _, pix := range kernel {
-		for i := range horOp {
-			r := int(pix.r)
-			b := int(pix.b)
-			g := int(pix.g)
-			horRes = append(horRes, r*horOp[i], g*horOp[i], b*horOp[i])
-		}
-	}
-	for _, pix := range kernel {
-		for i := range verOp {
-			r := int(pix.r)
-			b := int(pix.b)
-			g := int(pix.g)
-			verRes = append(horRes, r*verOp[i], g*verOp[i], b*verOp[i])
-		}
+	for i, pix := range kernel {
+		r := int(pix.r)
+		b := int(pix.b)
+		g := int(pix.g)
+		horRes = append(horRes, r*horOp[i], g*horOp[i], b*horOp[i])
+		verRes = append(verRes, r*verOp[i], g*verOp[i], b*verOp[i])
 	}
 
-	return pixel{}
+	rX := int(0)
+	bX := int(0)
+	gX := int(0)
+	rY := int(0)
+	bY := int(0)
+	gY := int(0)
+
+	for i := 0; i < len(horRes)-2; i += 3 {
+		rX += horRes[i]
+		bX += horRes[i+1]
+		gX += horRes[i+2]
+		rY += verRes[i]
+		bY += verRes[i+1]
+		gY += verRes[i+2]
+	}
+
+	resR := math.Max(math.Min(math.Round(math.Sqrt(float64(rX*rX)+float64(rY*rY))), 255), 0)
+	resG := math.Max(math.Min(math.Round(math.Sqrt(float64(gX*gX)+float64(gY*gY))), 255), 0)
+	resB := math.Max(math.Min(math.Round(math.Sqrt(float64(bX*bX)+float64(bY*bY))), 255), 0)
+
+	return pixel{
+		r: byte(resR),
+		g: byte(resG),
+		b: byte(resB),
+	}
 }
 
 func calcKernel(img []pixel, i int, w int) []pixel {
